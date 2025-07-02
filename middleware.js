@@ -1,6 +1,28 @@
 import { clerkMiddleware } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
 
-export default clerkMiddleware();
+// Define protected routes as an array (if needed elsewhere)
+const protectedRoutes = [
+  "/dasboard(.*)",
+  "/resume(.*)",
+  "/ai-cover-letter(.*)",
+  "/interview-prep(.*)",
+  "/onboarding(.*)",
+];
+
+function isProtectedPath(pathname) {
+  return protectedRoutes.some((route) => pathname.startsWith(route));
+}
+
+export default clerkMiddleware(async(auth, req)=> {
+  const {userId, redirectToSignIn} = await auth();
+
+  if(!userId && isProtectedPath(req.nextUrl.pathname)){
+    return redirectToSignIn();
+  }
+
+  return NextResponse.next();
+});
 
 export const config = {
   matcher: [

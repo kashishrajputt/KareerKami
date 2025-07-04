@@ -2,6 +2,7 @@ import HeroSection from "@/components/Hero";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { faqs } from "@/data/faqs";
 import { features } from "@/data/features";
 import { howItWorks } from "@/data/howItWorks";
@@ -71,19 +72,22 @@ export default function Home() {
               Four Simple Steps to Accelerate Your Career Growth
             </h1>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {howItWorks.map((item,index)=>{
-            return(
-              <div key={index}
-              className="flex flex-col items-center text-center space-y-4">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center hustify-center">
-                  {item.icon}
-                </div>
-                <h3 className="font-semibold text-xl">{item.title}</h3>
-                <p className="text-muted-foreground">{item.description}</p>
-              </div>
-            );
-          })}</div>
+          <div className="flex items-center justify-center gap-6 max-w-6xl mx-auto">
+            <Carousel>
+              <CarouselContent>
+                {howItWorks.map((item, index) => (
+                  <CarouselItem key={index}
+                  className="flex flex-col items-center justify-center text-center">
+                    {item.icon}
+                  <div className=" mt-4 text-xl font-semibold">{item.title}</div>
+                  <div className="mt-2 text-muted-foreground">{item.description}</div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious />
+              <CarouselNext />
+            </Carousel>
+          </div>
         </div>
       </section>
 

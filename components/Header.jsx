@@ -21,16 +21,16 @@ const Header = () => {
                     <div className = "flex items-center space-x-2 md:space-x-4">
                       <SignedIn>
                         <Link href={'/dashboard'}>
-                        <Button variant = 'outline'>
+                        <Button >
                             <LayoutDashboard className="h-4 w-4" />
-                            <span className='hidden md:block'>Industry Insights</span>
+                            <span >Industry Insights</span>
                             
                           </Button>
                         </Link>
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant='outline'>
+                          <Button >
                             <StarsIcon className="h-4 w-4" />
                             <span className='hidden md:block'>Growth Tools</span>
                             <ChevronDown className="h-4 w-4" />

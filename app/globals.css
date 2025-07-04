@@ -56,7 +56,7 @@
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  --muted-foreground: oklch(57.42% 0.0033 307.713);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
@@ -90,7 +90,7 @@
   --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(29.085% 0.01666 275.442);
+  --muted: oklch(69.715% 0.01054 16.997 / 0.1);
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
@@ -122,3 +122,46 @@
     @apply bg-background text-foreground;
   }
 }
+
+.grid-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    rgba(84, 66, 95, 0.1) 1px,
+    transparent 1px
+  ),
+  linear-gradient(to bottom, rgba(84, 66, 95, 0.1) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.grid-background::before{
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, transparent, rgba(1, 0, 3, 0.9));
+
+}
+
+@layer utilities {
+  .gradient-title {
+    background: linear-gradient(to right, #9ca3af, #e5e7eb, #4b5563);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+.hero-image-wrapper {
+  perspective: 1000px;
+}
+

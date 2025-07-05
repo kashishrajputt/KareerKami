@@ -5,9 +5,12 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, FileText, GraduationCap, LayoutDashboard, PenBox, StarsIcon, User } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { checkUser } from '@/lib/checkUser';
 
 
-const Header = () => {
+
+const Header = async() => {
+  await checkUser();
   return (
     <header className="fixed top-0 w-full border-b bg-background/80 backdrop-blur-md z-50 supports-[backdrop-filter]:bg-background/60" >
                 <nav className = "w-full px-4 h-16 flex items-center justify-between">

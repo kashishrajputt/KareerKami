@@ -1,10 +1,12 @@
 "use server";
+import { db } from "@/lib/prisma";
+import { auth } from "@clerk/nextjs/server";
 
 export async function updateUser(data){
     const { userId } = await auth();
     if(!userId) throw new Error("Unauthorized");
 
-    const user = await db.userfindUnique({
+    const user = await db.user.findUnique({
         where: {
             clerkUserId: userId,
         },
@@ -15,7 +17,7 @@ export async function updateUser(data){
     try {
 
         const result = await db.$transaction(
-            async() => {
+            async(tx) => {
          //find if the industry exists
          let industryInsight = await tX.industryInsight.findUnique({
             where:{
@@ -25,7 +27,7 @@ export async function updateUser(data){
         // if industry doesnt exit, create it with default values - will replace
         // it with ai later
         if(!industryInsight){
-            industryInsight = awaittx.industryInsight.create({
+            industryInsight = await tx.industryInsight.create({
                 data: {
                     industry: data.industry,
                     salaryRanges: [],
@@ -70,7 +72,7 @@ export async function getUserOnboardingStatus(){
     const { userId } = await auth();
     if(!userId) throw new Error("Unauthorized");
 
-    const user = await db.userfindUnique({
+    const user = await db.user.findUnique({
         where: {
             clerkUserId: userId,
         },

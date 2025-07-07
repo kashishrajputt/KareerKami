@@ -29,14 +29,7 @@ const HeroSection = () => {
         </div>
         <div className="hero-image-wrapper relative mt-5 md:mt-0 flex justify-center">
           <div className="relative w-fit">
-            <Image
-              src={"/banner.jpeg"}
-              width={1280}
-              height={720}
-              alt="Banner"
-              className="rounded-lg shadow-2xl hero-image"
-              priority
-            />
+            
             <div
               className="pointer-events-none absolute inset-0 rounded-lg"
               style={{

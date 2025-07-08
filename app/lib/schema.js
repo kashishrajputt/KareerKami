@@ -17,12 +17,16 @@ export const onboardingSchema = z.object({
             .min(0, "Experience must be at least 0 years")
             .max(50, "Experience cannot exceed 50 years")
     ),
-    skills: z.string().transform((val)=>
+    skills: z
+  .string({
+    required_error: "Please enter at least one skill",
+  })
+  .min(1, "Please enter at least one skill")
+  .transform((val) =>
     val
-        ? val
-            .split(",")
-            .map((skill) => skill.trim())
-            .filter(Boolean)
-        : undefined
-    ),
+      .split(",")
+      .map((skill) => skill.trim())
+      .filter(Boolean)
+  ),
+
 })

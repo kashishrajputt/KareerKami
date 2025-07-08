@@ -183,7 +183,7 @@ const OnboardingForm = ({industries}) => {
               </p>
             )}
             </div>
-            <Button type="submit" className="w-full" disavle={updateLoading}>
+            <Button type="submit" className="w-full" disabled={updateLoading}>
               {updateLoading ? (
                 <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

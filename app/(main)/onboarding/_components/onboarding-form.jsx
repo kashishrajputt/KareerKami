@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import { onboardingSchema } from "@/app/lib/schema";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,12 +11,23 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
+import useFetch from "@/hooks/use-fetch";
+import { updateUser } from "@/actions/user";
+import { toast } from "sonner";
 
-const OnboardingPage = ({industries}) => {
+const OnboardingForm = ({industries}) => {
 
 
     const [selectedIndustry, setSelectedIndustry] = useState(null);
     const router = useRouter();
+
+    const {
+      loading: updateLoading,
+      fn: updateUserFn,
+      data: updateResult,
+    } = useFetch(updateUser);
+
     const {
         register, 
         handleSubmit, 
@@ -28,10 +39,31 @@ const OnboardingPage = ({industries}) => {
     });
 
     const onSubmit = async (values) => {
-      console.log(values);
+      try{
+        const formattedIndustry = `${values.industry}-${values.subIndustry
+          .toLowerCase()
+          .replace(/ /g, "-")}`;
+
+          await updateUserFn({
+            ...values,
+            industry: formattedIndustry,
+          });
+
+      }catch(error){
+        console.error("Onboarding error:", error);
+      }
     };
 
-    
+    useEffect(()=>{
+      if(updateResult?.success && !updateLoading){
+        toast.success("Profile completed successfully!");
+        router.push("/dashboard");
+        router.refresh();
+      }
+
+    }, [updateResult, updateLoading]);
+
+
     const watchIndustry = watch("industry");
 
   return (
@@ -39,7 +71,8 @@ const OnboardingPage = ({industries}) => {
       <Card className="w-full max-w-lg mt-10 mx-2">
         <CardHeader>
           <CardTitle className="gradient-title text-4xl">Card Title</CardTitle>
-          <CardDescription>Card Description</CardDescription>
+          <CardDescription>Select your industry to get personalized career insights and
+            recommendations.</CardDescription>
           
         </CardHeader>
         <CardContent>
@@ -150,8 +183,16 @@ const OnboardingPage = ({industries}) => {
               </p>
             )}
             </div>
-            <Button type="submit" className="w-full">
-              Complete Profile
+            <Button type="submit" className="w-full" disavle={updateLoading}>
+              {updateLoading ? (
+                <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+                </>
+              ):(
+                "Complete Profile"
+              )}
+             
             </Button>
           </form>
         </CardContent>
@@ -161,4 +202,4 @@ const OnboardingPage = ({industries}) => {
   );
 };
 
-export default OnboardingPage;
+export default OnboardingForm;

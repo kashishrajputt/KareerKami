@@ -2,6 +2,7 @@
 import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 
+
 export async function updateUser(data){
     const { userId } = await auth();
     if(!userId) throw new Error("Unauthorized");
@@ -19,7 +20,7 @@ export async function updateUser(data){
         const result = await db.$transaction(
             async(tx) => {
          //find if the industry exists
-         let industryInsight = await tX.industryInsight.findUnique({
+         let industryInsight = await tx.industryInsight.findUnique({
             where:{
                 industry: data.industry,
             },
@@ -54,7 +55,7 @@ export async function updateUser(data){
             },
         });
 
-        return { updatedUser, industryInsights };
+        return { updatedUser, industryInsight };
         },
         {
             timeout: 10000, //default: 5000

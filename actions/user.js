@@ -60,12 +60,12 @@ export async function updateUser(data){
         {
             timeout: 10000, //default: 5000
         });
-
+        revalidatePath("/");
         return result.user;
 
     } catch(error){
-console.error("Error updating user and industry:", error.message);
-throw new Error("Failed to update profile")
+        console.error("Error updating user and industry:", error.message);
+        throw new Error("Failed to update profile")
     }
 }
 

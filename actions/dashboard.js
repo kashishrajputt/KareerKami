@@ -33,8 +33,8 @@ export const generateAIInsights=async(industry)=>{
 
         const result = await model.generateContent(prompt)
         const response = result.response;
-        const text = response.text;
-        const cleanedText = test.replace(/```(?:json)?\n>/g, "").trim();
+        const text = response.text();
+        const cleanedText = text.replace(/```(?:json)?\n?/g, "").trim();
 
         return JSON.parse(cleanedText);
 

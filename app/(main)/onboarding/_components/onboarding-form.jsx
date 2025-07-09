@@ -155,7 +155,7 @@ const OnboardingForm = ({industries}) => {
               <Label htmlFor="skills">Skills</Label>
             <Input 
             id="skills"
-            placeholder="e.g., Python, TavaScript, etc." 
+            placeholder="e.g., Python, JavaScript, etc." 
             {...register("skills")}
             />
             <p className="text-sm text-muted-foreground">

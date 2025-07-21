@@ -22,6 +22,15 @@ const Quiz = () => {
     data: quizData,
   } = useFetch(generateQuiz);
 
+  const {
+    loading: saveResult,
+    fn: saveQuizResultFn,
+    data: resultData,
+    setData: setResultData,
+  } = useFetch(saveQuizResult);
+
+  console.log(resultData);
+
   useEffect(()=>{
     if(quizData){
       setAnswers(new Array(quizData.length).fill(null));
@@ -31,6 +40,39 @@ const Quiz = () => {
   const handleAnswer = (answer) =>{
     const newAnswers = [...answers];
     setAnswers(newAnswers);
+  };
+
+  const handleNext = () => {
+    if(currentQuestion < quizData.length -1 ){
+      setCurrentQuestion(currentQuestion + 1);
+      setShowExplanation(false);
+    }
+    else{
+      finishQuiz();
+    }
+  };
+
+  const calculateScore = () => {
+    let correct = 0;
+    answers.forEach((answer, index) => {
+      if(answer === quizData[index].correctAnswer){
+        correct++;
+      }
+    });
+    return (correct / quizData.length)*100;
+  };
+
+  const finishQuiz = async()=>{
+    const score = calculateScore();
+
+
+    try{
+      await saveQuizResultFn(quizData, answers, score);
+      toast.success("Quiz completed!");
+    }
+    catch(error){
+      toast.error(error.message || "Failed to save quiz results");
+    }
   };
 
   if(generatingQuiz){
@@ -93,7 +135,29 @@ const Quiz = () => {
             )}
         </CardContent>
         <CardFooter>
-          
+          { !showExplanation && (
+            <Button
+              onClick={()=> setShowExplanation(true)}
+              variant = "outline"
+              disabled={!answers[currentQuestion]}
+              >
+                Show Explanation
+            </Button>
+          )}
+          <Button
+            onClick={handleNext}
+            className="ml-auto"
+            disabled={!answers[currentQuestion] || savingResult}
+            
+          >
+            {saveQuizResult && (
+              <Barloader className="mt-4" width={"100%"} color="gray" />
+            )}
+            {curentQuestion < quizData.length - 1
+            ? "Next Question"
+            : "Submit Quiz"}
+            
+          </Button>
         </CardFooter>
       </Card>
   )

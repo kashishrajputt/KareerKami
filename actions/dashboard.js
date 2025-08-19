@@ -2,12 +2,13 @@
 
 import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
+const client = new OpenAI ({
+    apiKey: process.env.GROK_API_KEY,
+    baseURL: "https://api.x.ai/v1",
 })
+
 
 
 export const generateAIInsights=async(industry)=>{
@@ -31,9 +32,17 @@ export const generateAIInsights=async(industry)=>{
           Include at least 5 skills and trends.
         `;
 
-        const result = await model.generateContent(prompt)
-        const response = result.response;
-        const text = response.text();
+        const completion = await client.chat.completions.create({
+            model: "grok-4",  // or grok-3, grok-beta depending on availability
+            messages: [
+            { role: "system", content: "You are a precise JSON generator." },
+            { role: "user", content: prompt },
+            ],
+        });
+
+        const text = completion.choices[0].message.content.trim();
+
+        // Clean potential formatting issues
         const cleanedText = text.replace(/```(?:json)?\n?/g, "").trim();
 
         return JSON.parse(cleanedText);

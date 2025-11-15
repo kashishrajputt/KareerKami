@@ -2,140 +2,148 @@
 
 import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
-})
+async function callLLM(prompt) {
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "http://localhost:3000",
+      "X-Title": "Interview Quiz App",
+    },
+    body: JSON.stringify({
+      model: "meta-llama/llama-3-8b-instruct",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.4,
+    }),
+  });
 
-export async function generateQuiz(){
-    const { userId } = await auth();
-        if(!userId) throw new Error("Unauthorized");
-    
-        let user = await db.user.findUnique({
-            where: {
-                clerkUserId: userId,
-            },
-        });
-    
-        if (!user) {
-            user = await db.user.create({
-                data: {
-                    clerkUserId: userId,
-                },
-            });
-        }
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`LLM request failed (${response.status}): ${text}`);
+  }
 
-        try{
-
-        
-        const prompt = `
-        Generate 10 technical interview questions for a ${
-            user.industry
-        } professionals ${
-            user.skills?.length ? `with expertise in ${user.skills.join(", ")}`  : ""
-        }.
-
-        Each question should be multiple choice with 4 options.
-
-        Return the response in this JSON format only, no additional text:
-        {
-            "questions}: [
-                {
-                    "question": "string",
-                    "options": ["string","string","string","string"],
-                    :correctAnswer": "string",
-                    "explanation": "string"          
-                }
-            ]
-        }`;
-        const result = await model.generateContent(prompt)
-        const response = result.response;
-        const text = response.text();
-
-        const cleanedText = text.replace(/```(?:json)?\n?/g, "").trim();
-        const quiz =  JSON.parse(cleanedText);
-
-        return quiz.questions;
-    }catch(error){
-        console.error("Error generating quiz:", error);
-        throw new Error("Failed to generate quiz questions");
-    }
+  const json = await response.json().catch(() => null);
+  return json?.choices?.[0]?.message?.content ?? "";
 }
 
-export async function saveQuizResult(questions, answers, score){
-    const { userId } = await auth();
-        if(!userId) throw new Error("Unauthorized");
-    
-        let user = await db.user.findUnique({
-            where: {
-                clerkUserId: userId,
-            },
-        });
-    
-        if (!user) {
-            user = await db.user.create({
-                data: {
-                    clerkUserId: userId,
-                },
-            });
-        }
+export async function generateQuiz() {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
 
-        const questionResults = questions.map((q, index)=>({
-            question: q.question,
-            answer: questionResults.correctAnswer,
-            userAnswer: answers[index],
-            isCorrect: questionResults.correctAnswer === answers[index],
-            explanation: questionResults.explanation,
-        }));
+  let user = await db.user.findUnique({ where: { clerkUserId: userId } });
+  if (!user) {
+    user = await db.user.create({ data: { clerkUserId: userId } });
+  }
 
-        const wrongAnswers = questionResults.filter((q)=>!q.isCorrect);
-        let improvementTip = null;
+  try {
+    const prompt = `
+        Generate 10 technical multiple-choice interview questions for a ${user.industry || "general"} professional${user.skills?.length ? ` with expertise in ${user.skills.join(", ")}` : ""}.
 
-        if(wrongAnswers.length >0){
-            const wrongQuestionsText = wrongAnswers
-            .map(
-                (q) => 
-                    `Question: "${q.question}"\nCorrect Answer: "${q.answer}"\nUser Answer: "${q.userAnswer}"`
-            )
-            .join("\n\n");
+        Each question should have 4 options. Return the response in this JSON format only (no additional text):
 
-            const improvementPrompt = `
-            The user got following ${user.industry} technical interview questions wrong:
-            
-            ${wrongQuestionsText}
-            Based on these mistakes, provide a concise, specific improvement tip.
-            Focus on the knowledge gaps revealed by these wrong answers.
-            Keep the response under 2 sentences and make it encouraging.
-            Focus on what to learn/practice based on the wrong answers given.
-
-            `;
-            try{
-                const result = await model.generateContent(improvementPrompt)
-                const response = result.response;
-                const improvementTip = response.text().trim();
-
-            }catch(error){
-                console.error("Error generating improvement tip:", error);
+        {
+        "questions": [
+            {
+            "question": "string",
+            "options": ["string","string","string","string"],
+            "correctAnswer": "string",
+            "explanation": "string"
             }
+        ]
         }
+        `;
 
-        try{
-            const assessment = await db.assessment.create({
-                data: {
-                    userId: user.id,
-                    quizScore: score,
-                    questions: questionResults,
-                    category: "Technical",
-                    improvementTip,
-                },
-            });
-            return assessment;
-        }catch(error){
-            console.error("Error saving quiz result:", error);
-            throw new Error("Failed to save quiz result");
+    const raw = await callLLM(prompt);
+    const cleaned = String(raw).replace(/```(?:json)?\n?/g, "").trim();
 
-        }
+    let quiz;
+    try {
+      quiz = JSON.parse(cleaned);
+    } catch (parseErr) {
+      throw new Error("Failed to parse quiz JSON from LLM response: " + parseErr.message + " — response snapshot: " + cleaned.slice(0, 1000));
+    }
 
+    if (!quiz?.questions || !Array.isArray(quiz.questions)) {
+      throw new Error("LLM returned invalid quiz format: missing questions array");
+    }
+
+    return quiz.questions;
+  } catch (error) {
+    console.error("Error generating quiz:", error);
+    throw new Error("Failed to generate quiz questions");
+  }
+}
+
+export async function saveQuizResult(questions, answers, score) {
+  const { userId } = await auth();
+  if (!userId) throw new Error("Unauthorized");
+
+  let user = await db.user.findUnique({ where: { clerkUserId: userId } });
+  if (!user) {
+    user = await db.user.create({ data: { clerkUserId: userId } });
+  }
+
+  if (!Array.isArray(questions) || !Array.isArray(answers)) {
+    throw new Error("Invalid input: questions and answers must be arrays");
+  }
+
+  const questionResults = questions.map((q, index) => {
+    const correct = q?.correctAnswer ?? null;
+    const userAnswer = answers[index] ?? null;
+    return {
+      question: q?.question ?? "",
+      answer: correct,
+      userAnswer,
+      isCorrect: correct !== null ? correct === userAnswer : false,
+      explanation: q?.explanation ?? "",
+    };
+  });
+
+  const wrongAnswers = questionResults.filter((r) => !r.isCorrect);
+
+  let improvementTip = null;
+  if (wrongAnswers.length > 0) {
+    const wrongQuestionsText = wrongAnswers
+      .map(
+        (q) =>
+          `Question: "${q.question}"\nCorrect Answer: "${q.answer}"\nUser Answer: "${q.userAnswer}"`
+      )
+      .join("\n\n");
+
+    const improvementPrompt = `
+        The user got the following ${user.industry || "general"} technical questions wrong:
+
+        ${wrongQuestionsText}
+
+        Based on these mistakes, provide a concise, specific improvement tip (what to study/practice). Keep it under 2 sentences and encouraging.
+        Return only the tip as plain text.
+        `;
+
+    try {
+      const tipRaw = await callLLM(improvementPrompt);
+      improvementTip = String(tipRaw || "").trim();
+    } catch (err) {
+      console.error("Error generating improvement tip:", err);
+      improvementTip = null;
+    }
+  }
+
+  try {
+    const assessment = await db.assessment.create({
+      data: {
+        userId: user.id,
+        quizScore: score,
+        questions: questionResults,
+        category: "Technical",
+        improvementTip,
+      },
+    });
+
+    return assessment;
+  } catch (error) {
+    console.error("Error saving quiz result:", error);
+    throw new Error("Failed to save quiz result");
+  }
 }

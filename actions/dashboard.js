@@ -10,40 +10,8 @@ if (!process.env.GEMINI_API_KEY) {
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Preferred model names (will try to match available models)
-const PREFERRED_MODELS = [
-  "gemini-1.5-flash",
-  "gemini-1.5",
-  "gemini-1.0",
-  "text-bison@001",
-  "chat-bison@001",
-];
-
-async function chooseModelName() {
-  const list = await genAI.listModels();
-  const models = list?.models ?? [];
-
-  // Try exact or partial match from preferred list
-  for (const pref of PREFERRED_MODELS) {
-    const match = models.find((m) => m.name === pref || m.name?.includes(pref));
-    if (match) {
-      // If SDK provides supportedMethods, prefer models that support generateContent
-      if (!match.supportedMethods || match.supportedMethods.includes("generateContent")) {
-        return match.name;
-      }
-    }
-  }
-
-  // fallback: pick first model that advertises generateContent support
-  const genContentModel = models.find((m) => m.supportedMethods?.includes("generateContent"));
-  if (genContentModel) return genContentModel.name;
-
-  // otherwise surface available models for diagnostics
-  const available = models.map((m) => m.name).slice(0, 50).join(", ");
-  throw new Error(
-    `No suitable generative model found for generateContent. Available models (sample): ${available}`
-  );
-}
+// Use a stable, guaranteed-available model
+const MODEL_NAME = "gemini-1.5-flash-latest"; 
 
 export const generateAIInsights = async (industry) => {
   if (!industry) throw new Error("No industry provided to generateAIInsights.");
@@ -68,44 +36,30 @@ export const generateAIInsights = async (industry) => {
     Include at least 5 skills and trends.
   `;
 
-  const modelName = await chooseModelName();
-  const generativeModel = genAI.getGenerativeModel({ model: modelName });
+  const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+
+  const result = await model.generateContent(prompt);
+  const response = result.response;
+
+  let text = "";
+
+  if (typeof response.text === "function") {
+    text = await response.text();
+  } else {
+    text = String(response.text ?? "");
+  }
+
+  const cleaned = text.replace(/```(?:json)?\n?/g, "").trim();
 
   try {
-    const result = await generativeModel.generateContent(prompt);
-    const response = result?.response;
-
-    // response.text may be a function, a promise, or a string
-    let text = "";
-    if (!response) throw new Error("Empty response object from model.generateContent()");
-    if (typeof response.text === "function") {
-      const maybeText = response.text();
-      text = maybeText instanceof Promise ? await maybeText : String(maybeText || "");
-    } else {
-      text = String(response.text ?? "");
-    }
-
-    const cleaned = text.replace(/```(?:json)?\n?/g, "").trim();
-    try {
-      return JSON.parse(cleaned);
-    } catch (parseErr) {
-      throw new Error(
-        "Failed to parse JSON from model response: " +
-          parseErr.message +
-          " — response snapshot: " +
-          cleaned.slice(0, 1000)
-      );
-    }
+    return JSON.parse(cleaned);
   } catch (err) {
-    // If model name isn't supported for generateContent you'll see a 404 / not found error;
-    // surface a helpful message including modelName so you can inspect available models.
-    const msg = String(err?.message || err);
-    if (/not found|404|is not found|supported for generateContent/i.test(msg)) {
-      throw new Error(
-        `Model "${modelName}" is not available for generateContent with this API/version. Run listModels() to see available models or check your Google Cloud permissions. Original error: ${msg}`
-      );
-    }
-    throw err;
+    throw new Error(
+      "Failed to parse JSON from model response: " +
+      err.message +
+      " — response snapshot: " +
+      cleaned.slice(0, 1000)
+    );
   }
 };
 
